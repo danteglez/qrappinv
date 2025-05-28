@@ -98,7 +98,7 @@ def main():
     st.title("Sistema de Asistencia por QR")
 
     # Leer parámetros de la URL
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
     page = query_params.get("page", ["registrar"])[0]  # por defecto: registrar
 
     # Mostrar navegación básica
