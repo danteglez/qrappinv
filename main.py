@@ -12,23 +12,24 @@ supabase = create_client(url, key)
 
 st.title("🎟️ Generador de QR para Asistencias")
 
-# Input para generar QR
-input_text = st.text_input("🔤 Ingrese el ID del evento/código:", value="Evento123")
+# Input para QR
+input_qr = st.text_input("🔤 Código único del QR (por ejemplo: Evento123):", value="Evento123")
+descripcion = st.text_input("📝 Descripción del QR (opcional):", value="Clase de Matemáticas")
 
-if st.button("Generar QR"):
-    qr_url = f"https://TU_BACKEND_URL.com/registrar?id_qr={input_text}"
-    qr = qrcode.make(qr_url)
-    buf = BytesIO()
-    qr.save(buf)
-    st.image(buf.getvalue(), caption=qr_url)
+if st.button("Generar y guardar QR"):
+    # Guarda en Supabase la info del QR
+    result = supabase.table("codigos_qr").insert({
+        "id_qr": input_qr,
+        "descripcion": descripcion
+    }).execute()
 
-st.divider()
-
-st.title("📋 Registros de Asistencia")
-response = supabase.table("asistencias").select("*").order("timestamp", desc=True).execute()
-
-if response.data:
-    df = pd.DataFrame(response.data)
-    st.dataframe(df[["id_qr", "timestamp"]])
-else:
-    st.info("No hay asistencias registradas aún.")
+    if result.data:
+        # Genera el QR con el link para registrar asistencia
+        qr_url = f"https://TU_BACKEND_URL.com/registrar?id_qr={input_qr}"
+        qr = qrcode.make(qr_url)
+        buf = BytesIO()
+        qr.save(buf)
+        st.image(buf.getvalue(), caption=f"QR para: {input_qr}")
+        st.success("✅ QR guardado y generado con éxito")
+    else:
+        st.error("⚠️ Ya existe un QR con ese código.")
