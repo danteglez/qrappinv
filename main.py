@@ -97,11 +97,10 @@ def ver_qrs_alumnos():
 def main():
     st.title("Sistema de Asistencia por QR")
 
-    # Leer parámetros de la URL
+    # ✅ usa el nuevo método correctamente
     query_params = st.query_params
-    page = query_params.get("page", ["registrar"])[0]  # por defecto: registrar
+    page = query_params.get("page", "registrar")  # sin listas
 
-    # Mostrar navegación básica
     st.markdown("""
     ### Navegación
     [Registrar Alumno](?page=registrar) | 
@@ -109,7 +108,6 @@ def main():
     [Ver QRs](?page=qrs)
     """)
 
-    # Navegación basada en URL
     if page == "registrar":
         registrar_alumno()
     elif page == "asistencia":
