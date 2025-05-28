@@ -1,72 +1,104 @@
 import streamlit as st
+import psycopg2
+import pandas as pd
 import qrcode
 import io
-from PIL import Image
-import numpy as np
 import cv2
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
-import av
-from supabase_client import supabase  # ← se importa desde archivo separado
+import numpy as np
+from PIL import Image
 
-st.set_page_config(page_title="QR Estudiantes", layout="centered")
-st.title("🎓 QR Estudiantes")
+DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
 
-# --- Generar QR ---
-st.header("🔧 Generar código QR")
-nombre_estudiante = st.text_input("Nombre del estudiante")
+def connect_db():
+    try:
+        return psycopg2.connect(DB_URL)
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
 
-if st.button("Generar QR") and nombre_estudiante:
-    qr = qrcode.make(nombre_estudiante)
-    buf = io.BytesIO()
-    qr.save(buf, format="PNG")
-    buf.seek(0)
+def generar_qr_bytes(codigo):
+    qr = qrcode.make(codigo)
+    buffer = io.BytesIO()
+    qr.save(buffer, format="PNG")
+    return buffer.getvalue()
 
-    archivo_nombre = f"{nombre_estudiante.replace(' ', '_')}.png"
-    st.image(buf, caption=f"Código QR de {nombre_estudiante}")
+def registrar_alumno():
+    st.title("Registrar Alumno")
+    matricula = st.text_input("Matrícula del alumno:")
+    nombre = st.text_input("Nombre del alumno:")
 
-    # Subir a Supabase Storage (usando buf.getvalue())
-    supabase.storage.from_("qr_codes").upload(
-        archivo_nombre, buf.getvalue(), file_options={"content-type": "image/png"}
-    )
+    if st.button("Guardar Alumno"):
+        if matricula and nombre:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("SELECT matricula FROM alumnos WHERE matricula = %s", (matricula,))
+                if cur.fetchone():
+                    st.error("La matrícula ya está registrada.")
+                else:
+                    qr_bytes = generar_qr_bytes(matricula)
+                    cur.execute("INSERT INTO alumnos (matricula, nombre, qr) VALUES (%s, %s, %s)",
+                                (matricula, nombre, psycopg2.Binary(qr_bytes)))
+                    conn.commit()
+                    st.success("Alumno registrado exitosamente")
+                    st.image(qr_bytes, caption="Código QR del alumno")
+                cur.close()
+                conn.close()
 
-    # URL pública del QR
-    public_url = f"https://avxyefrckoynbubddwhl.supabase.co/storage/v1/object/public/qr_codes/{archivo_nombre}"
+def escanear_qr_desde_imagen(img):
+    detector = cv2.QRCodeDetector()
+    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    data, bbox, _ = detector.detectAndDecode(img_cv)
+    return data if data else None
 
-    # Insertar en base de datos
-    supabase.table("qr_estudiantes").insert({
-        "nombre": nombre_estudiante,
-        "archivo_qr": archivo_nombre,
-        "url_qr": public_url
-    }).execute()
+def tomar_asistencia():
+    st.title("Tomar Asistencia")
+    foto = st.camera_input("Escanea el QR del alumno")
 
-    st.success("✅ QR generado y guardado en Supabase")
-    st.markdown(f"[🔗 Ver QR en nueva pestaña]({public_url})", unsafe_allow_html=True)
+    if foto is not None:
+        img = Image.open(foto)
+        matricula = escanear_qr_desde_imagen(img)
+        if matricula:
+            conn = connect_db()
+            if conn:
+                cur = conn.cursor()
+                cur.execute("SELECT nombre FROM alumnos WHERE matricula = %s", (matricula,))
+                alumno = cur.fetchone()
+                if alumno:
+                    cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (matricula,))
+                    conn.commit()
+                    st.success(f"Asistencia registrada para {alumno[0]} ({matricula})")
+                else:
+                    st.error("Matrícula no registrada")
+                cur.close()
+                conn.close()
+        else:
+            st.error("No se detectó ningún QR")
 
-# --- Escanear QR desde cámara ---
-st.header("📷 Escanear QR en tiempo real")
+def ver_asistencias():
+    st.title("Lista de Asistencias")
+    conn = connect_db()
+    if conn:
+        df = pd.read_sql("""
+            SELECT a.nombre, a.matricula, s.fecha, s.hora
+            FROM asistencias s
+            JOIN alumnos a ON s.matricula = a.matricula
+            ORDER BY s.fecha DESC, s.hora DESC
+        """, conn)
+        conn.close()
+        st.dataframe(df)
 
-class QRScanner(VideoTransformerBase):
-    def __init__(self):
-        self.detector = cv2.QRCodeDetector()
-        self.last_data = ""
+def main():
+    st.title("Sistema de Asistencia por QR")
+    opciones = ["Tomar Asistencia", "Registrar Alumno", "Ver Asistencias"]
+    seleccion = st.sidebar.selectbox("Menú", opciones)
 
-    def transform(self, frame: av.VideoFrame):
-        image = frame.to_ndarray(format="bgr24")
-        data, bbox, _ = self.detector.detectAndDecode(image)
+    if seleccion == "Tomar Asistencia":
+        tomar_asistencia()
+    elif seleccion == "Registrar Alumno":
+        registrar_alumno()
+    elif seleccion == "Ver Asistencias":
+        ver_asistencias()
 
-        if data:
-            self.last_data = data
-            cv2.putText(image, f"{data}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-        return image
-
-ctx = webrtc_streamer(
-    key="qr-scan",
-    video_transformer_factory=QRScanner,
-    media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
-)
-
-if ctx.video_transformer and ctx.video_transformer.last_data:
-    st.success(f"🔍 Código QR detectado: **{ctx.video_transformer.last_data}**")
+if __name__ == "__main__":
+    main()
