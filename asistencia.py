@@ -1,8 +1,8 @@
 import streamlit as st
 import psycopg2
+from PIL import Image
 import cv2
 import numpy as np
-from PIL import Image
 import io
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
@@ -14,27 +14,21 @@ def connect_db():
         st.error(f"Error de conexión: {e}")
         return None
 
-def leer_qr_opencv(image_file):
-    try:
-        image = Image.open(image_file).convert("RGB")
-        image_np = np.array(image)
-        image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-
-        detector = cv2.QRCodeDetector()
-        data, _, _ = detector.detectAndDecode(image_bgr)
-        return data if data else None
-    except Exception as e:
-        st.error(f"Error al procesar la imagen: {e}")
-        return None
+def escanear_qr_desde_imagen(img):
+    detector = cv2.QRCodeDetector()
+    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    data, bbox, _ = detector.detectAndDecode(img_cv)
+    return data if data else None
 
 def tomar_asistencia_con_camara_simple():
     st.title("Tomar Asistencia Automática con Cámara")
+    st.write("Toma una foto del código QR del alumno para registrar su asistencia automáticamente.")
 
-    foto = st.camera_input("Toma una foto del código QR")
+    foto = st.camera_input("Tomar o subir imagen del QR")
 
     if foto:
-        st.image(foto, caption="Imagen capturada")
-        codigo = leer_qr_opencv(foto)
+        img = Image.open(foto)
+        codigo = escanear_qr_desde_imagen(img)
 
         if codigo:
             conn = connect_db()
@@ -45,13 +39,13 @@ def tomar_asistencia_con_camara_simple():
                 if alumno:
                     cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (codigo,))
                     conn.commit()
-                    st.success(f"Asistencia registrada automáticamente para {alumno[0]} ({codigo})")
+                    st.success(f"Asistencia registrada para {alumno[0]} ({codigo})")
                 else:
                     st.error("Matrícula no registrada")
                 cur.close()
                 conn.close()
         else:
-            st.warning("No se detectó ningún código QR en la imagen.")
+            st.error("No se detectó ningún código QR en la imagen.")
 
 if __name__ == "__main__":
     tomar_asistencia_con_camara_simple()
