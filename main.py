@@ -113,9 +113,7 @@ def main():
     opciones = ["Tomar Asistencia", "Registrar Alumno", "Ver Asistencias", "Ver QRs de Alumnos"]
     seleccion = st.sidebar.selectbox("Menú", opciones)
 
-    if seleccion == "Tomar Asistencia":
-        tomar_asistencia_con_camara_simple()
-    elif seleccion == "Registrar Alumno":
+    if seleccion == "Registrar Alumno":
         registrar_alumno()
     elif seleccion == "Ver Asistencias":
         ver_asistencias()
