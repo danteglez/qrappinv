@@ -3,7 +3,6 @@ import psycopg2
 from PIL import Image
 import cv2
 import numpy as np
-import io
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
 
