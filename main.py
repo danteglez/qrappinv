@@ -5,7 +5,7 @@ import qrcode
 import io
 from PIL import Image
 
-DB_URL = "postgresql://postgres.mbidkiuthyjlvwqnsdpl:Dokiringuillas1@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
 
 def connect_db():
     try:
@@ -44,7 +44,7 @@ def registrar_alumno():
                 conn.close()
 
 def tomar_asistencia_con_camara_simple():
-    st.subheader("Tomar Asistencia")
+    st.header("Tomar Asistencia")
     st.info("Toma una foto del código QR del alumno y escribe el código leído.")
     foto = st.camera_input("Tomar foto del QR")
 
@@ -95,15 +95,29 @@ def ver_qrs_alumnos():
             st.info("No hay alumnos registrados.")
 
 def main():
-    st.title("Sistema de Registro de Alumnos y Asistencia")
-    
-    registrar_alumno()
-    
-    if st.button("Tomar asistencia"):
-        tomar_asistencia_con_camara_simple()
+    st.title("Sistema de Asistencia por QR")
 
-    st.markdown("---")
-    ver_qrs_alumnos()
+    # Leer parámetros de la URL
+    query_params = st.experimental_get_query_params()
+    page = query_params.get("page", ["registrar"])[0]  # por defecto: registrar
+
+    # Mostrar navegación básica
+    st.markdown("""
+    ### Navegación
+    [Registrar Alumno](?page=registrar) | 
+    [Tomar Asistencia](?page=asistencia) | 
+    [Ver QRs](?page=qrs)
+    """)
+
+    # Navegación basada en URL
+    if page == "registrar":
+        registrar_alumno()
+    elif page == "asistencia":
+        tomar_asistencia_con_camara_simple()
+    elif page == "qrs":
+        ver_qrs_alumnos()
+    else:
+        st.warning("Página no encontrada")
 
 if __name__ == "__main__":
     main()
