@@ -48,9 +48,15 @@ def ver_asistencias():
     conn = connect_db()
     if conn:
         df = pd.read_sql("""
-            SELECT a.nombre, a.matricula, s.fecha, s.hora
+            SELECT 
+                a.nombre, 
+                a.matricula, 
+                s.fecha, 
+                s.hora,
+                COALESCE(c.comentario, '') AS comentario
             FROM asistencias s
             JOIN alumnos a ON s.matricula = a.matricula
+            LEFT JOIN comentarios_asistencia c ON s.id = c.asistencia_id
             ORDER BY s.fecha DESC, s.hora DESC
         """, conn)
         conn.close()
