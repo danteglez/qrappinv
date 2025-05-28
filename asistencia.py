@@ -1,6 +1,7 @@
 import streamlit as st
 import psycopg2
 from PIL import Image
+from pyzbar.pyzbar import decode
 import io
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
@@ -12,19 +13,27 @@ def connect_db():
         st.error(f"Error de conexión: {e}")
         return None
 
-def tomar_asistencia_con_camara_simple():
-    st.title("Tomar Asistencia con Cámara")
-    st.write("Toma una foto del código QR del alumno. Luego ingresa manualmente el código leído.")
+def leer_qr_de_imagen(imagen):
+    try:
+        img = Image.open(imagen)
+        decoded = decode(img)
+        if decoded:
+            return decoded[0].data.decode("utf-8")
+        else:
+            return None
+    except Exception as e:
+        st.error(f"No se pudo procesar la imagen: {e}")
+        return None
 
-    foto = st.camera_input("Tomar foto del QR")
+def tomar_asistencia_con_camara_simple():
+    st.title("Tomar Asistencia con Cámara (Automática)")
+
+    foto = st.camera_input("Toma una foto del código QR del alumno")
 
     if foto:
         st.image(foto, caption="Imagen capturada")
-        st.info("Ahora escribe el código que aparece en el QR de la imagen (ej. matrícula):")
+        codigo = leer_qr_de_imagen(foto)
 
-    codigo = st.text_input("Código leído del QR")
-
-    if st.button("Registrar Asistencia"):
         if codigo:
             conn = connect_db()
             if conn:
@@ -34,11 +43,13 @@ def tomar_asistencia_con_camara_simple():
                 if alumno:
                     cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (codigo,))
                     conn.commit()
-                    st.success(f"Asistencia registrada para {alumno[0]} ({codigo})")
+                    st.success(f"Asistencia registrada automáticamente para {alumno[0]} ({codigo})")
                 else:
                     st.error("Matrícula no registrada")
                 cur.close()
                 conn.close()
+        else:
+            st.warning("No se detectó ningún código QR en la imagen.")
 
 if __name__ == "__main__":
     tomar_asistencia_con_camara_simple()
