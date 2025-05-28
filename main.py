@@ -24,9 +24,9 @@ if st.button("Generar QR") and nombre_estudiante:
     archivo_nombre = f"{nombre_estudiante.replace(' ', '_')}.png"
     st.image(buf, caption=f"Código QR de {nombre_estudiante}")
 
-    # Subir a Supabase Storage
+    # Subir a Supabase Storage (usando buf.getvalue())
     supabase.storage.from_("qr_codes").upload(
-        archivo_nombre, buf, file_options={"content-type": "image/png"}
+        archivo_nombre, buf.getvalue(), file_options={"content-type": "image/png"}
     )
 
     # URL pública del QR
@@ -40,6 +40,7 @@ if st.button("Generar QR") and nombre_estudiante:
     }).execute()
 
     st.success("✅ QR generado y guardado en Supabase")
+    st.markdown(f"[🔗 Ver QR en nueva pestaña]({public_url})", unsafe_allow_html=True)
 
 # --- Escanear QR desde cámara ---
 st.header("📷 Escanear QR en tiempo real")
