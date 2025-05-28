@@ -3,4 +3,4 @@ psycopg2-binary
 pandas
 qrcode
 Pillow
-pyzbar
+opencv-python

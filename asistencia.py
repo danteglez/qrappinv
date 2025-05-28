@@ -1,7 +1,8 @@
 import streamlit as st
 import psycopg2
+import cv2
+import numpy as np
 from PIL import Image
-from pyzbar.pyzbar import decode
 import io
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
@@ -13,26 +14,27 @@ def connect_db():
         st.error(f"Error de conexión: {e}")
         return None
 
-def leer_qr_de_imagen(imagen):
+def leer_qr_opencv(image_file):
     try:
-        img = Image.open(imagen)
-        decoded = decode(img)
-        if decoded:
-            return decoded[0].data.decode("utf-8")
-        else:
-            return None
+        image = Image.open(image_file).convert("RGB")
+        image_np = np.array(image)
+        image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+
+        detector = cv2.QRCodeDetector()
+        data, _, _ = detector.detectAndDecode(image_bgr)
+        return data if data else None
     except Exception as e:
-        st.error(f"No se pudo procesar la imagen: {e}")
+        st.error(f"Error al procesar la imagen: {e}")
         return None
 
 def tomar_asistencia_con_camara_simple():
-    st.title("Tomar Asistencia con Cámara (Automática)")
+    st.title("Tomar Asistencia Automática con Cámara")
 
-    foto = st.camera_input("Toma una foto del código QR del alumno")
+    foto = st.camera_input("Toma una foto del código QR")
 
     if foto:
         st.image(foto, caption="Imagen capturada")
-        codigo = leer_qr_de_imagen(foto)
+        codigo = leer_qr_opencv(foto)
 
         if codigo:
             conn = connect_db()
