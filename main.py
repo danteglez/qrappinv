@@ -3,8 +3,6 @@ import psycopg2
 import pandas as pd
 import qrcode
 import io
-import cv2
-import numpy as np
 from PIL import Image
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
@@ -45,35 +43,33 @@ def registrar_alumno():
                 cur.close()
                 conn.close()
 
-def escanear_qr_desde_imagen(img):
-    detector = cv2.QRCodeDetector()
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    data, bbox, _ = detector.detectAndDecode(img_cv)
-    return data if data else None
+def tomar_asistencia_con_camara_simple():
+    st.title("Tomar Asistencia con Cámara")
+    st.write("Toma una foto del código QR del alumno. Luego ingresa manualmente el código leído.")
 
-def tomar_asistencia():
-    st.title("Tomar Asistencia")
-    foto = st.camera_input("Escanea el QR del alumno")
+    foto = st.camera_input("Tomar foto del QR")
 
-    if foto is not None:
-        img = Image.open(foto)
-        matricula = escanear_qr_desde_imagen(img)
-        if matricula:
+    if foto:
+        st.image(foto, caption="Imagen capturada")
+        st.info("Ahora escribe el código que aparece en el QR de la imagen (ej. matrícula):")
+
+    codigo = st.text_input("Código leído del QR")
+
+    if st.button("Registrar Asistencia"):
+        if codigo:
             conn = connect_db()
             if conn:
                 cur = conn.cursor()
-                cur.execute("SELECT nombre FROM alumnos WHERE matricula = %s", (matricula,))
+                cur.execute("SELECT nombre FROM alumnos WHERE matricula = %s", (codigo,))
                 alumno = cur.fetchone()
                 if alumno:
-                    cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (matricula,))
+                    cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (codigo,))
                     conn.commit()
-                    st.success(f"Asistencia registrada para {alumno[0]} ({matricula})")
+                    st.success(f"Asistencia registrada para {alumno[0]} ({codigo})")
                 else:
                     st.error("Matrícula no registrada")
                 cur.close()
                 conn.close()
-        else:
-            st.error("No se detectó ningún QR")
 
 def ver_asistencias():
     st.title("Lista de Asistencias")
@@ -94,7 +90,7 @@ def main():
     seleccion = st.sidebar.selectbox("Menú", opciones)
 
     if seleccion == "Tomar Asistencia":
-        tomar_asistencia()
+        tomar_asistencia_con_camara_simple()
     elif seleccion == "Registrar Alumno":
         registrar_alumno()
     elif seleccion == "Ver Asistencias":

@@ -2,6 +2,5 @@ streamlit
 psycopg2-binary
 pandas
 qrcode
-opencv-python
 Pillow
-numpy
+
