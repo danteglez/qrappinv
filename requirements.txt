@@ -1,5 +1,6 @@
 streamlit
 qrcode[pil]
-opencv-python-headless
 Pillow
+opencv-python-headless
+streamlit-webrtc
 supabase
