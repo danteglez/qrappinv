@@ -1,6 +1,7 @@
 streamlit
-qrcode[pil]
+psycopg2-binary
+pandas
+qrcode
+opencv-python
 Pillow
-opencv-python-headless
-streamlit-webrtc
-supabase
+numpy
