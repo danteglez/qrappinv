@@ -84,9 +84,33 @@ def ver_asistencias():
         conn.close()
         st.dataframe(df)
 
+def ver_qrs_alumnos():
+    st.title("Códigos QR de Alumnos")
+    conn = connect_db()
+    if conn:
+        cur = conn.cursor()
+        cur.execute("SELECT matricula, nombre, qr FROM alumnos ORDER BY nombre")
+        alumnos = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if alumnos:
+            for matricula, nombre, qr_bytes in alumnos:
+                with st.expander(f"{nombre} ({matricula})"):
+                    if qr_bytes:
+                        try:
+                            img = Image.open(io.BytesIO(qr_bytes))
+                            st.image(img, caption=f"QR de {nombre}", width=150)
+                        except:
+                            st.warning("No se pudo mostrar el QR.")
+                    else:
+                        st.warning("No hay QR disponible para este alumno.")
+        else:
+            st.info("No hay alumnos registrados.")
+
 def main():
     st.title("Sistema de Asistencia por QR")
-    opciones = ["Tomar Asistencia", "Registrar Alumno", "Ver Asistencias"]
+    opciones = ["Tomar Asistencia", "Registrar Alumno", "Ver Asistencias", "Ver QRs de Alumnos"]
     seleccion = st.sidebar.selectbox("Menú", opciones)
 
     if seleccion == "Tomar Asistencia":
@@ -95,6 +119,8 @@ def main():
         registrar_alumno()
     elif seleccion == "Ver Asistencias":
         ver_asistencias()
+    elif seleccion == "Ver QRs de Alumnos":
+        ver_qrs_alumnos()
 
 if __name__ == "__main__":
     main()
