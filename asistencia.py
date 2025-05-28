@@ -38,26 +38,30 @@ def tomar_asistencia_con_camara_simple():
                 if alumno:
                     st.success(f"Alumno detectado: {alumno[0]} ({codigo})")
 
-                    # Campo de comentario visible solo si hay alumno
-                    comentario = st.text_input("Comentario (opcional):")
+                    # Mostrar campo de comentario
+                    comentario = st.text_area("Comentario (opcional):", key="comentario_texto")
 
                     if st.button("Registrar asistencia"):
-                        # Insertar asistencia
-                        cur.execute("INSERT INTO asistencias (matricula) VALUES (%s) RETURNING id", (codigo,))
-                        asistencia_id = cur.fetchone()[0]
+                        try:
+                            # Insertar asistencia
+                            cur.execute("INSERT INTO asistencias (matricula) VALUES (%s) RETURNING id", (codigo,))
+                            asistencia_id = cur.fetchone()[0]
 
-                        # Insertar comentario si existe
-                        if comentario.strip():
-                            cur.execute(
-                                "INSERT INTO comentarios_asistencia (asistencia_id, comentario) VALUES (%s, %s)",
-                                (asistencia_id, comentario.strip())
-                            )
+                            # Insertar comentario si existe
+                            if comentario.strip():
+                                cur.execute(
+                                    "INSERT INTO comentarios_asistencia (asistencia_id, comentario) VALUES (%s, %s)",
+                                    (asistencia_id, comentario.strip())
+                                )
 
-                        conn.commit()
-                        st.success("Asistencia y comentario registrados correctamente.")
-
-                    cur.close()
-                    conn.close()
+                            conn.commit()
+                            st.success("Asistencia y comentario registrados correctamente.")
+                        except Exception as e:
+                            conn.rollback()
+                            st.error(f"Error al registrar la asistencia: {e}")
+                        finally:
+                            cur.close()
+                            conn.close()
                 else:
                     st.error("Matrícula no registrada")
         else:
