@@ -5,7 +5,7 @@ import qrcode
 import io
 from PIL import Image
 
-DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+DB_URL = "postgresql://postgres.mbidkiuthyjlvwqnsdpl:Dokiringuillas1@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
 
 def connect_db():
     try:
@@ -21,7 +21,7 @@ def generar_qr_bytes(codigo):
     return buffer.getvalue()
 
 def registrar_alumno():
-    st.title("Registrar Alumno")
+    st.header("Registrar Alumno")
     matricula = st.text_input("Matrícula del alumno:")
     nombre = st.text_input("Nombre del alumno:")
 
@@ -44,14 +44,13 @@ def registrar_alumno():
                 conn.close()
 
 def tomar_asistencia_con_camara_simple():
-    st.title("Tomar Asistencia con Cámara")
-    st.write("Toma una foto del código QR del alumno. Luego ingresa manualmente el código leído.")
-
+    st.subheader("Tomar Asistencia")
+    st.info("Toma una foto del código QR del alumno y escribe el código leído.")
     foto = st.camera_input("Tomar foto del QR")
 
     if foto:
         st.image(foto, caption="Imagen capturada")
-        st.info("Ahora escribe el código que aparece en el QR de la imagen (ej. matrícula):")
+        st.info("Escribe el código que aparece en el QR (ej. matrícula):")
 
     codigo = st.text_input("Código leído del QR")
 
@@ -71,21 +70,8 @@ def tomar_asistencia_con_camara_simple():
                 cur.close()
                 conn.close()
 
-def ver_asistencias():
-    st.title("Lista de Asistencias")
-    conn = connect_db()
-    if conn:
-        df = pd.read_sql("""
-            SELECT a.nombre, a.matricula, s.fecha, s.hora
-            FROM asistencias s
-            JOIN alumnos a ON s.matricula = a.matricula
-            ORDER BY s.fecha DESC, s.hora DESC
-        """, conn)
-        conn.close()
-        st.dataframe(df)
-
 def ver_qrs_alumnos():
-    st.title("Códigos QR de Alumnos")
+    st.header("Códigos QR de Alumnos")
     conn = connect_db()
     if conn:
         cur = conn.cursor()
@@ -109,18 +95,15 @@ def ver_qrs_alumnos():
             st.info("No hay alumnos registrados.")
 
 def main():
-    st.title("Sistema de Asistencia por QR")
-    opciones = ["Tomar Asistencia", "Registrar Alumno", "Ver Asistencias", "Ver QRs de Alumnos"]
-    seleccion = st.sidebar.selectbox("Menú", opciones)
-
-    if seleccion == "Tomar Asistencia":
+    st.title("Sistema de Registro de Alumnos y Asistencia")
+    
+    registrar_alumno()
+    
+    if st.button("Tomar asistencia"):
         tomar_asistencia_con_camara_simple()
-    elif seleccion == "Registrar Alumno":
-        registrar_alumno()
-    elif seleccion == "Ver Asistencias":
-        ver_asistencias()
-    elif seleccion == "Ver QRs de Alumnos":
-        ver_qrs_alumnos()
+
+    st.markdown("---")
+    ver_qrs_alumnos()
 
 if __name__ == "__main__":
     main()
