@@ -36,13 +36,30 @@ def tomar_asistencia_con_camara_simple():
                 cur.execute("SELECT nombre FROM alumnos WHERE matricula = %s", (codigo,))
                 alumno = cur.fetchone()
                 if alumno:
-                    cur.execute("INSERT INTO asistencias (matricula) VALUES (%s)", (codigo,))
-                    conn.commit()
-                    st.success(f"Asistencia registrada para {alumno[0]} ({codigo})")
+                    st.success(f"Alumno detectado: {alumno[0]} ({codigo})")
+
+                    # Campo de comentario visible solo si hay alumno
+                    comentario = st.text_input("Comentario (opcional):")
+
+                    if st.button("Registrar asistencia"):
+                        # Insertar asistencia
+                        cur.execute("INSERT INTO asistencias (matricula) VALUES (%s) RETURNING id", (codigo,))
+                        asistencia_id = cur.fetchone()[0]
+
+                        # Insertar comentario si existe
+                        if comentario.strip():
+                            cur.execute(
+                                "INSERT INTO comentarios_asistencia (asistencia_id, comentario) VALUES (%s, %s)",
+                                (asistencia_id, comentario.strip())
+                            )
+
+                        conn.commit()
+                        st.success("Asistencia y comentario registrados correctamente.")
+
+                    cur.close()
+                    conn.close()
                 else:
                     st.error("Matrícula no registrada")
-                cur.close()
-                conn.close()
         else:
             st.error("No se detectó ningún código QR en la imagen.")
 
