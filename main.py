@@ -1,35 +1,40 @@
 import streamlit as st
-import pandas as pd
 import qrcode
-from io import BytesIO
-from supabase import create_client
+from PIL import Image
+import io
+import cv2
+import numpy as np
+from supabase_client import supabase  # importa conexión
 
-# Supabase setup
-url = "https://avxyefrckoynbubddwhl.supabase.co"  # Este es tu Project URL
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2eHllZnJja295bmJ1YmRkd2hsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODM4ODQ3MCwiZXhwIjoyMDYzOTY0NDcwfQ.WC0RvJyNlGM_yxXzmCo4BHBtxUiJMkesg1TbLyOCp_k"
+st.title("🎓 Generador y Lector de Códigos QR")
 
-supabase = create_client(url, key)
+st.header("🔧 Generar código QR")
+nombre_estudiante = st.text_input("Nombre del estudiante")
 
-st.title("🎟️ Generador de QR para Asistencias")
+if st.button("Generar QR") and nombre_estudiante:
+    qr = qrcode.make(nombre_estudiante)
+    buf = io.BytesIO()
+    qr.save(buf, format='PNG')
+    buf.seek(0)
 
-# Input para QR
-input_qr = st.text_input("🔤 Código único del QR (por ejemplo: Evento123):", value="Evento123")
-descripcion = st.text_input("📝 Descripción del QR (opcional):", value="Clase de Matemáticas")
+    st.image(qr, caption=f"Código QR de {nombre_estudiante}")
 
-if st.button("Generar y guardar QR"):
-    # Guarda en Supabase la info del QR
-    result = supabase.table("codigos_qr").insert({
-        "id_qr": input_qr,
-        "descripcion": descripcion
-    }).execute()
+    # Subir a Supabase Storage
+    archivo_nombre = f"{nombre_estudiante.replace(' ', '_')}.png"
+    supabase.storage.from_("qr_codes").upload(archivo_nombre, buf, file_options={"content-type": "image/png"})
+    st.success("✅ QR guardado en Supabase")
 
-    if result.data:
-        # Genera el QR con el link para registrar asistencia
-        qr_url = f"https://TU_BACKEND_URL.com/registrar?id_qr={input_qr}"
-        qr = qrcode.make(qr_url)
-        buf = BytesIO()
-        qr.save(buf)
-        st.image(buf.getvalue(), caption=f"QR para: {input_qr}")
-        st.success("✅ QR guardado y generado con éxito")
+st.header("📷 Leer código QR desde imagen")
+imagen_qr = st.file_uploader("Sube una imagen con código QR", type=["png", "jpg", "jpeg"])
+
+if imagen_qr is not None:
+    file_bytes = np.asarray(bytearray(imagen_qr.read()), dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    qr_detector = cv2.QRCodeDetector()
+    data, bbox, _ = qr_detector.detectAndDecode(img)
+
+    if bbox is not None and data:
+        st.success(f"Contenido del QR: **{data}**")
+        st.image(imagen_qr, caption="Imagen subida")
     else:
-        st.error("⚠️ Ya existe un QR con ese código.")
+        st.error("No se detectó ningún código QR válido.")

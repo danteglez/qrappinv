@@ -1,8 +1,5 @@
 streamlit
-qrcode
+qrcode[pil]
+opencv-python-headless
 Pillow
-pandas
-fastapi
-uvicorn
 supabase
-python-dotenv
