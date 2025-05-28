@@ -1,9 +1,7 @@
 import streamlit as st
 import psycopg2
-import pandas as pd
-import qrcode
-import io
 from PIL import Image
+import io
 
 DB_URL = "postgresql://postgres.avxyefrckoynbubddwhl:Dokiringuillas1@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
 
@@ -41,3 +39,6 @@ def tomar_asistencia_con_camara_simple():
                     st.error("Matrícula no registrada")
                 cur.close()
                 conn.close()
+
+if __name__ == "__main__":
+    tomar_asistencia_con_camara_simple()
